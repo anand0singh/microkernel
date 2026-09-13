@@ -1,0 +1,13 @@
+[package]
+name = "driver-virtio"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libsys = { path = "../../userspace/libsys" }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

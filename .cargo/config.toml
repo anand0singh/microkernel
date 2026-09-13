@@ -1,0 +1,13 @@
+[target.x86_64-unknown-none]
+rustflags = [
+    "-C", "link-arg=-Tkernel/linker.ld",
+    "-C", "linker=rust-lld",
+]
+
+[target.x86_64-unknown-uefi]
+rustflags = [
+    "-C", "linker=rust-lld",
+]
+
+[build]
+target = "x86_64-unknown-none"

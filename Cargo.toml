@@ -1,0 +1,20 @@
+[workspace]
+members = [
+    "boot",
+    "kernel",
+    "servers/vfs",
+    "servers/net",
+    "servers/crypto",
+    "servers/driver_virtio",
+    "userspace/libsys",
+    "userspace/init",
+]
+resolver = "2"
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
+opt-level = 3
