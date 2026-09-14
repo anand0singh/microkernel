@@ -180,42 +180,48 @@ cargo run --manifest-path tools/security_suite/Cargo.toml
    MICROKERNEL SECURITY VERIFICATION & FUZZING SUITE
 ================================================================
 
-[1/7] Running XTS-AES-256 Sector Cipher Test...
-  -> Encrypted 4096-byte sector at LBA 42 in 1.57ms
-  -> Decrypted 4096-byte sector in 1.55ms
+[1/8] Running XTS-AES-256 Sector Cipher Test...
+  -> Encrypted 4096-byte sector at LBA 42 in 2.12ms
+  -> Decrypted 4096-byte sector in 1.87ms
   [PASS] XTS-AES-256 Sector Roundtrip Verified!
 
-[2/7] Running Merkle Tree Block Hash Integrity Test...
+[2/8] Running Merkle Tree Block Hash Integrity Test...
   -> Clean Merkle Root (4 blocks): [fa, d2, 67, 8e, 22, d9, 9e, 0e]
   -> Tampered Merkle Root:          [2e, e2, e1, d1, 40, 52, 93, b0]
   [PASS] Merkle Tree Block Tampering Rejection Verified!
 
-[3/7] Running Capability Derivation Tree (CDT) Revocation Test...
+[3/8] Running Capability Derivation Tree (CDT) Revocation Test...
   -> Attenuation Guard Verified: Privilege escalation rejected.
   [PASS] CDT Cascading Revocation Verified (Grandchild revoked, sibling intact)!
 
-[4/7] Running Seccomp-like Capability Filter Test...
+[4/8] Running Seccomp-like Capability Filter Test...
   -> Filter Immutability Lock Verified.
   [PASS] Seccomp-like Capability Filter Verified (Whitelist, Kill rule, Violations tracked)!
 
-[5/7] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...
-  -> Executed 100000 random syscall packets in 3.26ms
-  -> Average dispatch latency: 32.62 ns/op
+[5/8] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...
+  -> Executed 100000 random syscall packets in 4.16ms
+  -> Average dispatch latency: 41.64 ns/op
   [PASS] 100,000 Fuzz Iterations Passed with 0 Invariant Violations!
 
-[6/7] Running Distributed Raft Consensus Quorum Test...
+[6/8] Running Distributed Raft Consensus Quorum Test...
   -> Achieved quorum: 4/5 votes.
   [PASS] Raft Consensus Protocol Simulation Verified!
 
-[7/7] Running ELF64 Binary Loader & Protection Flags Test...
+[7/8] Running ELF64 Binary Loader & Protection Flags Test...
   -> Validated ELF64 Header: Entry=0x400000, Segments=2
   -> Enforced NX Invariant: Data segment marked non-executable.
   -> Enforced W^X Invariant: Code segment marked non-writable.
   -> Malformed Header Rejection Verified.
   [PASS] ELF64 Loader & Memory Protection Invariants Verified!
 
+[8/8] Running Preemptive Multi-Tasking Scheduler State Machine Test...
+  -> IPC Blocking Transition Verified: Blocked Thread 1 yielded to Thread 2.
+  -> Quantum Preemption Verified: Round-robin advanced to Thread 3.
+  -> Unblocking & Dead Thread Elimination Verified.
+  [PASS] Preemptive Multi-Tasking Scheduler State Machine Verified!
+
 ================================================================
-   ALL 7 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE
+   ALL 8 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE
 ================================================================
 ```
 

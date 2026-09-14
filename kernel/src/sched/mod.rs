@@ -54,6 +54,20 @@ impl Scheduler {
 }
 
 pub static SCHEDULER: Mutex<Scheduler> = Mutex::new(Scheduler::new());
+pub static SYSTEM_TICKS: Mutex<u64> = Mutex::new(0);
+
+pub fn on_timer_tick() {
+    let mut ticks = SYSTEM_TICKS.lock();
+    *ticks = ticks.wrapping_add(1);
+    let current_ticks = *ticks;
+    drop(ticks);
+
+    // Every 4ms quantum, preemptively evaluate next ready thread
+    if current_ticks % 4 == 0 {
+        let mut sched = SCHEDULER.lock();
+        let _ = sched.schedule_next();
+    }
+}
 
 pub fn init_scheduler() {
     // Fixed-priority preemptive APIC scheduler initialized

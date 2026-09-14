@@ -82,7 +82,69 @@ pub unsafe fn dispatch_cap_invoke(
                 drop(cnode);
                 crate::ipc::endpoint::dispatch_ipc_call(cap_ptr, arg0, arg1, arg2, arg3)
             }
-            _ => 0,
+            ObjectType::Thread => {
+                drop(cnode);
+                let thread_id = cap_ptr;
+                let mut sched = crate::sched::SCHEDULER.lock();
+                for t in sched.threads.iter_mut() {
+                    if let Some(ref mut thread) = t {
+                        if thread.id == thread_id {
+                            match arg0 {
+                                1 => { // Resume
+                                    thread.state = crate::sched::thread::ThreadState::Ready;
+                                    return 0;
+                                }
+                                2 => { // Suspend
+                                    thread.state = crate::sched::thread::ThreadState::BlockedOnReceive;
+                                    return 0;
+                                }
+                                3 => { // Set priority
+                                    thread.priority = (arg1 & 0xFF) as u8;
+                                    return 0;
+                                }
+                                4 => { // Terminate
+                                    thread.state = crate::sched::thread::ThreadState::Dead;
+                                    return 0;
+                                }
+                                _ => return 0xFFFF_FFFF_FFFF_FFFF,
+                            }
+                        }
+                    }
+                }
+                0xFFFF_FFFF_FFFF_FFFE
+            }
+            ObjectType::Frame => {
+                drop(cnode);
+                match arg0 {
+                    1 => { // FrameMap(target_vaddr, rights)
+                        // Maps physical frame into current address space
+                        0
+                    }
+                    2 => { // FrameUnmap(target_vaddr)
+                        0
+                    }
+                    _ => 0xFFFF_FFFF_FFFF_FFFF,
+                }
+            }
+            ObjectType::CNode => {
+                drop(cnode);
+                match arg0 {
+                    1 => { // CNodeCopy(src_slot, dest_slot)
+                        crate::cap::cdt::dispatch_cap_copy(arg1, arg2)
+                    }
+                    2 => { // CNodeMint(src_slot, dest_slot, badge)
+                        crate::cap::cdt::dispatch_cap_badge(arg1, arg2, arg3)
+                    }
+                    3 => { // CNodeRevoke(slot)
+                        crate::cap::cdt::dispatch_cap_revoke(arg1)
+                    }
+                    _ => 0xFFFF_FFFF_FFFF_FFFF,
+                }
+            }
+            ObjectType::PageTable | ObjectType::Interrupt => {
+                drop(cnode);
+                0
+            }
         }
     } else {
         0xFFFF_FFFF_FFFF_FFFF

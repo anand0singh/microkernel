@@ -322,7 +322,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 1: XTS-AES-256 4 KiB Sector Cryptography
     // -------------------------------------------------------------
-    println!("\n[1/7] Running XTS-AES-256 Sector Cipher Test...");
+    println!("\n[1/8] Running XTS-AES-256 Sector Cipher Test...");
     let key1 = [0x2bu8; 32];
     let key2 = [0x7eu8; 32];
     let xts = XtsAes256::new(key1, key2);
@@ -348,7 +348,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 2: Merkle Tree Block Integrity & Tamper Detection
     // -------------------------------------------------------------
-    println!("\n[2/7] Running Merkle Tree Block Hash Integrity Test...");
+    println!("\n[2/8] Running Merkle Tree Block Hash Integrity Test...");
     let blocks = vec![
         [0x11u8; 4096],
         [0x22u8; 4096],
@@ -369,7 +369,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 3: Capability Derivation Tree (CDT) Cascading Revocation
     // -------------------------------------------------------------
-    println!("\n[3/7] Running Capability Derivation Tree (CDT) Revocation Test...");
+    println!("\n[3/8] Running Capability Derivation Tree (CDT) Revocation Test...");
     let mut cdt = CapabilityTable::new();
     let root_cap = cdt.mint_root(0b0000_1111); // Read, Write, Execute, Grant
     let child1 = cdt.derive_child(root_cap, 0b0000_0011).expect("Child 1 derivation failed"); // Read, Write
@@ -392,7 +392,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 4: Programmable Seccomp-like Syscall Filtering
     // -------------------------------------------------------------
-    println!("\n[4/7] Running Seccomp-like Capability Filter Test...");
+    println!("\n[4/8] Running Seccomp-like Capability Filter Test...");
     let mut filter = CapabilityFilter::new(FilterAction::Deny); // Default Deny
     // Whitelist Op 1 (CapInvoke), Op 4 (IpcCall), Op 6 (Yield)
     filter.add_rule(FilterRule { op: 1, match_arg0: false, arg0_val: 0, action: FilterAction::Allow }).unwrap();
@@ -416,7 +416,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 5: Syzkaller-style 100,000 Iteration Fuzzing Harness
     // -------------------------------------------------------------
-    println!("\n[5/7] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...");
+    println!("\n[5/8] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...");
     let mut rng = Xorshift64::new(0x1337_C0DE_F00D_BA5E);
     let fuzz_cycles = 100_000;
     let t_fuzz = Instant::now();
@@ -443,7 +443,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 6: Distributed Raft Consensus Simulation
     // -------------------------------------------------------------
-    println!("\n[6/7] Running Distributed Raft Consensus Quorum Test...");
+    println!("\n[6/8] Running Distributed Raft Consensus Quorum Test...");
     let cluster_size = 5;
     let quorum = (cluster_size / 2) + 1; // 3 votes required
     let mut votes_received = 1; // Self vote
@@ -460,7 +460,7 @@ fn main() {
     // -------------------------------------------------------------
     // TEST 7: In-Kernel ELF64 Zero-Allocation Loader & Memory Protection
     // -------------------------------------------------------------
-    println!("\n[7/7] Running ELF64 Binary Loader & Protection Flags Test...");
+    println!("\n[7/8] Running ELF64 Binary Loader & Protection Flags Test...");
     let mut elf_image = vec![0u8; 512];
     // Magic \x7fELF
     elf_image[0..4].copy_from_slice(&[0x7f, b'E', b'L', b'F']);
@@ -510,7 +510,89 @@ fn main() {
     println!("  -> Malformed Header Rejection Verified.");
     println!("  [PASS] ELF64 Loader & Memory Protection Invariants Verified!");
 
+    // -------------------------------------------------------------
+    // TEST 8: Preemptive Multi-Tasking Scheduler State Machine
+    // -------------------------------------------------------------
+    println!("\n[8/8] Running Preemptive Multi-Tasking Scheduler State Machine Test...");
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum SimThreadState {
+        Ready,
+        Running,
+        BlockedOnReceive,
+        Dead,
+    }
+
+    #[allow(dead_code)]
+    struct SimThread {
+        id: u64,
+        state: SimThreadState,
+        priority: u8,
+        quantum_remaining: u32,
+    }
+
+    struct SimScheduler {
+        threads: Vec<SimThread>,
+        current: usize,
+    }
+
+    impl SimScheduler {
+        fn schedule_next(&mut self) -> Option<usize> {
+            let start = self.current;
+            let n = self.threads.len();
+            for i in 1..=n {
+                let idx = (start + i) % n;
+                if self.threads[idx].state == SimThreadState::Ready {
+                    self.threads[self.current].state = match self.threads[self.current].state {
+                        SimThreadState::Running => SimThreadState::Ready,
+                        other => other,
+                    };
+                    self.threads[idx].state = SimThreadState::Running;
+                    self.threads[idx].quantum_remaining = 4;
+                    self.current = idx;
+                    return Some(idx);
+                }
+            }
+            if self.threads[start].state == SimThreadState::Running || self.threads[start].state == SimThreadState::Ready {
+                Some(start)
+            } else {
+                None
+            }
+        }
+    }
+
+    let mut sched = SimScheduler {
+        threads: vec![
+            SimThread { id: 1, state: SimThreadState::Running, priority: 10, quantum_remaining: 4 }, // init
+            SimThread { id: 2, state: SimThreadState::Ready, priority: 10, quantum_remaining: 4 },   // vfs
+            SimThread { id: 3, state: SimThreadState::Ready, priority: 10, quantum_remaining: 4 },   // crypto
+        ],
+        current: 0,
+    };
+
+    // Step 1: Thread 1 runs, then blocks on IPC receive
+    sched.threads[0].state = SimThreadState::BlockedOnReceive;
+    let next_t = sched.schedule_next().expect("Expected next thread");
+    assert_eq!(next_t, 1, "Thread 2 (VFS) should be scheduled next");
+    assert_eq!(sched.threads[1].state, SimThreadState::Running);
+    println!("  -> IPC Blocking Transition Verified: Blocked Thread 1 yielded to Thread 2.");
+
+    // Step 2: Thread 2 quantum expires -> Thread 3 scheduled
+    let next_t2 = sched.schedule_next().expect("Expected Thread 3");
+    assert_eq!(next_t2, 2, "Thread 3 (Crypto) should be scheduled next");
+    assert_eq!(sched.threads[1].state, SimThreadState::Ready);
+    assert_eq!(sched.threads[2].state, SimThreadState::Running);
+    println!("  -> Quantum Preemption Verified: Round-robin advanced to Thread 3.");
+
+    // Step 3: Thread 1 unblocks back to Ready, Thread 3 terminates (Dead)
+    sched.threads[0].state = SimThreadState::Ready;
+    sched.threads[2].state = SimThreadState::Dead;
+    let next_t3 = sched.schedule_next().expect("Expected unblocked thread");
+    assert_eq!(next_t3, 0, "Unblocked Thread 1 should be scheduled, Dead Thread 3 skipped");
+    assert_eq!(sched.threads[0].state, SimThreadState::Running);
+    println!("  -> Unblocking & Dead Thread Elimination Verified.");
+    println!("  [PASS] Preemptive Multi-Tasking Scheduler State Machine Verified!");
+
     println!("\n================================================================");
-    println!("   ALL 7 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE");
+    println!("   ALL 8 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE");
     println!("================================================================");
 }

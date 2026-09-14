@@ -169,6 +169,18 @@ pub fn ipc_recv(endpoint_cap: u64) -> (u64, u64, u64, u64) {
     unsafe { syscall(&msg) }
 }
 
+pub fn yield_now() -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: 0,
+        op: SyscallOp::Yield as u64,
+        arg0: 0,
+        arg1: 0,
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

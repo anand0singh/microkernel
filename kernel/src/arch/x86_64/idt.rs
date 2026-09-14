@@ -78,6 +78,7 @@ extern "x86-interrupt" fn page_fault_handler(
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    crate::sched::on_timer_tick();
     unsafe {
         crate::arch::x86_64::apic::end_of_interrupt();
     }
