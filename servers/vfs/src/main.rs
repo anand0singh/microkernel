@@ -43,7 +43,10 @@ pub extern "C" fn _start() -> ! {
             // Simulate chunk read from physical storage driver
             chunk[0] = block_idx as u8;
 
-            let expected_hash = [0u8; 32];
+            let mut expected_hash = [0u8; 32];
+            expected_hash[0..8].copy_from_slice(&expected_hash_low.to_le_bytes());
+            expected_hash[8..16].copy_from_slice(&expected_hash_high.to_le_bytes());
+
             let is_valid = verify_chunk_integrity(&chunk, &expected_hash);
 
             if !is_valid {

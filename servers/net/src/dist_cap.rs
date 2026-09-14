@@ -1,4 +1,5 @@
 use libsys::ipc_call;
+use spin::Mutex;
 
 #[derive(Clone, Copy)]
 pub struct RemoteEndpointCap {
@@ -12,13 +13,28 @@ pub struct ExportedCapTableEntry {
     pub valid: bool,
 }
 
-pub static mut EXPORTED_CAP_TABLE: [ExportedCapTableEntry; 32] = [const {
+pub static EXPORTED_CAP_TABLE: Mutex<[ExportedCapTableEntry; 32]> = Mutex::new([const {
     ExportedCapTableEntry {
         token: [0; 32],
         local_cnode_slot: 0,
         valid: false,
     }
-}; 32];
+}; 32]);
+
+pub fn register_exported_cap(token: [u8; 32], local_cnode_slot: u64) -> Result<(), ()> {
+    let mut table = EXPORTED_CAP_TABLE.lock();
+    for entry in table.iter_mut() {
+        if !entry.valid {
+            *entry = ExportedCapTableEntry {
+                token,
+                local_cnode_slot,
+                valid: true,
+            };
+            return Ok(());
+        }
+    }
+    Err(())
+}
 
 pub fn handle_remote_cap_invocation(
     token: &[u8; 32],
@@ -28,12 +44,13 @@ pub fn handle_remote_cap_invocation(
     arg3: u64,
 ) -> (u64, u64, u64, u64) {
     // 1. Verify incoming capability token in Exported Capability Table
-    unsafe {
-        for entry in EXPORTED_CAP_TABLE.iter() {
-            if entry.valid && entry.token == *token {
-                // Token valid! Invoke target local capability via microkernel IPC
-                return ipc_call(entry.local_cnode_slot, arg0, arg1, arg2, arg3);
-            }
+    let table = EXPORTED_CAP_TABLE.lock();
+    for entry in table.iter() {
+        if entry.valid && entry.token == *token {
+            let slot = entry.local_cnode_slot;
+            drop(table);
+            // Token valid! Invoke target local capability via microkernel IPC
+            return ipc_call(slot, arg0, arg1, arg2, arg3);
         }
     }
 
