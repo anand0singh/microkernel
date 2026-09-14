@@ -41,6 +41,14 @@ pub unsafe extern "C" fn rust_cap_dispatcher(
             // Yield
             0
         }
+        7 => {
+            // CapBadge
+            crate::cap::cdt::dispatch_cap_badge(cap_ptr, arg0, arg1)
+        }
+        8 => {
+            // CapCopy
+            crate::cap::cdt::dispatch_cap_copy(cap_ptr, arg0)
+        }
         _ => 0xFFFF_FFFF_FFFF_FFFF, // Unknown opcode error
     }
 }

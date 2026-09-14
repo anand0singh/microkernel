@@ -21,6 +21,8 @@ pub enum SyscallOp {
     IpcCall   = 4,
     IpcRecv   = 5,
     Yield     = 6,
+    CapBadge  = 7,
+    CapCopy   = 8,
 }
 
 #[repr(C)]
@@ -65,6 +67,54 @@ pub fn cap_invoke(cap_ptr: u64, arg0: u64, arg1: u64, arg2: u64, arg3: u64) -> (
         arg1,
         arg2,
         arg3,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn cap_mint(src_slot: u64, dest_slot: u64, rights_mask: u64) -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: src_slot,
+        op: SyscallOp::CapMint as u64,
+        arg0: dest_slot,
+        arg1: rights_mask,
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn cap_revoke(slot: u64) -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: slot,
+        op: SyscallOp::CapRevoke as u64,
+        arg0: 0,
+        arg1: 0,
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn cap_badge(src_slot: u64, dest_slot: u64, badge: u64) -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: src_slot,
+        op: SyscallOp::CapBadge as u64,
+        arg0: dest_slot,
+        arg1: badge,
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn cap_copy(src_slot: u64, dest_slot: u64) -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: src_slot,
+        op: SyscallOp::CapCopy as u64,
+        arg0: dest_slot,
+        arg1: 0,
+        arg2: 0,
+        arg3: 0,
     };
     unsafe { syscall(&msg) }
 }

@@ -21,7 +21,10 @@ pub extern "C" fn _start() -> ! {
     // 3. Initialize Capability Engine & CDT
     cap::init_cap_engine();
 
-    // 4. Initialize Preemptive Scheduler
+    // 4. Initialize Zero-Copy Synchronous IPC
+    ipc::init_ipc();
+
+    // 5. Initialize Preemptive Scheduler
     sched::init_scheduler();
 
     // 5. Test Drop to User Space (Ring 3)
