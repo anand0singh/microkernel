@@ -119,3 +119,44 @@ pub unsafe fn dispatch_cap_revoke(slot: u64) -> u64 {
         0xFFFF_FFFF_FFFF_FFFF
     }
 }
+
+pub unsafe fn dispatch_cap_badge(src_slot: u64, dest_slot: u64, badge: u64) -> u64 {
+    let mut cnode = ROOT_CNODE.lock();
+    if let Some(src_cap) = cnode.lookup(src_slot as usize) {
+        if !src_cap.rights.contains(super::rights::Rights::GRANT) {
+            return 0xFFFF_FFFF_FFFF_FFFE; // Permission Denied: Needs GRANT right to badge
+        }
+
+        let mut new_cap = src_cap.clone();
+        new_cap.badge = Some(badge);
+
+        let mut cdt = CDT.lock();
+        if let Some(node_id) = cdt.alloc_node(dest_slot as usize, Some(src_cap.cdt_node_id)) {
+            new_cap.cdt_node_id = node_id;
+            if cnode.insert(dest_slot as usize, new_cap).is_ok() {
+                return 0; // Success
+            }
+        }
+    }
+    0xFFFF_FFFF_FFFF_FFFF
+}
+
+pub unsafe fn dispatch_cap_copy(src_slot: u64, dest_slot: u64) -> u64 {
+    let mut cnode = ROOT_CNODE.lock();
+    if let Some(src_cap) = cnode.lookup(src_slot as usize) {
+        if !src_cap.rights.contains(super::rights::Rights::GRANT) {
+            return 0xFFFF_FFFF_FFFF_FFFE; // Permission Denied: Needs GRANT right
+        }
+
+        let mut new_cap = src_cap.clone();
+
+        let mut cdt = CDT.lock();
+        if let Some(node_id) = cdt.alloc_node(dest_slot as usize, Some(src_cap.cdt_node_id)) {
+            new_cap.cdt_node_id = node_id;
+            if cnode.insert(dest_slot as usize, new_cap).is_ok() {
+                return 0; // Success
+            }
+        }
+    }
+    0xFFFF_FFFF_FFFF_FFFF
+}

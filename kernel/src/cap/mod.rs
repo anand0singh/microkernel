@@ -59,9 +59,21 @@ pub unsafe fn test_phase3_cap() {
         assert!(cnode.lookup(3).is_some());
     }
 
-    // 4. Trigger Cascading Revocation on Slot 1
+    // 4. Verify Badged Capability Creation (Slot 0 -> Slot 4 with badge 0xDEADBEEF)
+    let badge_res = cdt::dispatch_cap_badge(0, 4, 0xDEAD_BEEF);
+    assert_eq!(badge_res, 0, "Phase 3: Badging slot 0 -> slot 4 failed");
+
+    let badged_cap = cnode::ROOT_CNODE.lock().lookup(4);
+    assert!(badged_cap.is_some(), "Phase 3: Badged slot 4 lookup failed");
+    assert_eq!(badged_cap.unwrap().badge, Some(0xDEAD_BEEF), "Phase 3: Badge mismatch");
+
+    // 5. Verify Permission Enforcement (Attempt badging from ungranted Slot 2)
+    let bad_badge_res = cdt::dispatch_cap_badge(2, 5, 0x1234);
+    assert_eq!(bad_badge_res, 0xFFFF_FFFF_FFFF_FFFE, "Phase 3: Ungranted badging was not blocked");
+
+    // 6. Trigger Cascading Revocation on Slot 1
     // Revoking slot 1 must recursively invalidate slot 1 (child) and slot 2 (grandchild),
-    // while keeping slot 0 (root) and slot 3 (sibling) intact!
+    // while keeping slot 0 (root), slot 3 (sibling), and slot 4 (badged sibling) intact!
     let revoke_res = cdt::dispatch_cap_revoke(1);
     assert_eq!(revoke_res, 0, "Phase 3: Revoking slot 1 failed");
 
@@ -71,5 +83,6 @@ pub unsafe fn test_phase3_cap() {
         assert!(cnode.lookup(1).is_none(), "Phase 3: Slot 1 was not revoked");
         assert!(cnode.lookup(2).is_none(), "Phase 3: Grandchild slot 2 was not recursively revoked");
         assert!(cnode.lookup(3).is_some(), "Phase 3: Sibling slot 3 was unexpectedly revoked");
+        assert!(cnode.lookup(4).is_some(), "Phase 3: Badged slot 4 was unexpectedly revoked");
     }
 }
