@@ -2,9 +2,11 @@ pub mod apic;
 pub mod entry;
 pub mod gdt;
 pub mod idt;
+pub mod serial;
 pub mod syscall;
 
 pub fn init_arch() {
+    serial::init_serial();
     gdt::init_gdt();
     idt::init_idt();
     unsafe {
