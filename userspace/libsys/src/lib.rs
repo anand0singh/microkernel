@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 use bitflags::bitflags;
 
@@ -91,4 +91,27 @@ pub fn ipc_recv(endpoint_cap: u64) -> (u64, u64, u64, u64) {
         arg3: 0,
     };
     unsafe { syscall(&msg) }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_syscall_op_discriminants() {
+        assert_eq!(SyscallOp::CapInvoke as u64, 1);
+        assert_eq!(SyscallOp::CapMint as u64, 2);
+        assert_eq!(SyscallOp::CapRevoke as u64, 3);
+        assert_eq!(SyscallOp::IpcCall as u64, 4);
+        assert_eq!(SyscallOp::IpcRecv as u64, 5);
+        assert_eq!(SyscallOp::Yield as u64, 6);
+    }
+
+    #[test]
+    fn test_rights_bitflags() {
+        let rights = Rights::READ | Rights::WRITE;
+        assert!(rights.contains(Rights::READ));
+        assert!(rights.contains(Rights::WRITE));
+        assert!(!rights.contains(Rights::EXECUTE));
+    }
 }
