@@ -8,6 +8,9 @@ mod ipc;
 mod mm;
 mod sched;
 
+#[path = "../tests/fuzz_harness.rs"]
+mod fuzz_harness;
+
 use core::panic::PanicInfo;
 
 #[no_mangle]
@@ -27,7 +30,12 @@ pub extern "C" fn _start() -> ! {
     // 5. Initialize Preemptive Scheduler
     sched::init_scheduler();
 
-    // 5. Test Drop to User Space (Ring 3)
+    // 6. Run Phase 6 Formal & Syscall Fuzz Verification Suite
+    unsafe {
+        fuzz_harness::run_syscall_fuzz_suite(256);
+    }
+
+    // 7. Test Drop to User Space (Ring 3)
     let test_user_code = ring3_test_user_code as *const () as usize as u64;
     let test_user_stack = 0x7000_0000_0000u64;
 
