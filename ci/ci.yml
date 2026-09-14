@@ -1,0 +1,62 @@
+name: CI - Build & Security Verification
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build Microkernel & Security Services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust Nightly Toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: x86_64-unknown-none,x86_64-unknown-uefi
+
+      - name: Cargo Build Workspace
+        run: |
+          cargo build --workspace --verbose
+
+      - name: Verify ELF Service Binaries
+        run: |
+          services=("kernel" "vfs" "net" "crypto" "audit" "driver-virtio" "init" "vault" "shell")
+          for srv in "${services[@]}"; do
+            file="target/x86_64-unknown-none/debug/$srv"
+            if [ -f "$file" ]; then
+              echo "==> Verified binary: $file ($(stat -c%s "$file") bytes)"
+            else
+              echo "Error: missing $file" >&2
+              exit 1
+            fi
+          done
+
+      - name: Build UEFI Bootloader (x86_64-unknown-uefi)
+        run: |
+          cargo build -p boot --target x86_64-unknown-uefi
+          ls -lh target/x86_64-unknown-uefi/debug/boot.efi
+
+      - name: Assemble UEFI ESP Layout
+        run: |
+          mkdir -p target/esp/EFI/BOOT target/esp/SERVICES
+          cp target/x86_64-unknown-uefi/debug/boot.efi target/esp/EFI/BOOT/BOOTX64.EFI
+          cp target/x86_64-unknown-none/debug/kernel target/esp/KERNEL.ELF
+          services=("vfs" "net" "crypto" "audit" "driver-virtio" "init" "vault" "shell")
+          for srv in "${services[@]}"; do
+            cp "target/x86_64-unknown-none/debug/$srv" "target/esp/SERVICES/$srv.elf"
+          done
+          echo "ESP Artifacts successfully assembled:"
+          ls -laR target/esp/
+
+      - name: Run Security Verification & Fuzzing Suite
+        run: |
+          cargo run --manifest-path tools/security_suite/Cargo.toml
+

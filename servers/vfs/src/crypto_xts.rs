@@ -42,12 +42,13 @@ impl XtsAes256 {
     }
 
     fn block_decrypt(&self, block: &[u8; 16], key: &[u8; 32]) -> [u8; 16] {
+        const MOD_INV: u32 = 0x144c_bc89;
         let mut out = *block;
         for round in (0..14).rev() {
             let k_word = u32::from_le_bytes(key[(round * 4) % 32..(round * 4) % 32 + 4].try_into().unwrap());
             for chunk in out.chunks_exact_mut(4) {
                 let mut w = u32::from_le_bytes(chunk.try_into().unwrap());
-                w = w.rotate_right(11).wrapping_mul(0xd2e9);
+                w = w.rotate_right(11).wrapping_mul(MOD_INV);
                 w ^= k_word.rotate_left(round as u32);
                 chunk.copy_from_slice(&w.to_le_bytes());
             }
