@@ -7,6 +7,7 @@ mod cap;
 mod ipc;
 mod mm;
 mod sched;
+mod security;
 
 #[path = "../tests/fuzz_harness.rs"]
 mod fuzz_harness;
@@ -27,10 +28,13 @@ pub extern "C" fn _start() -> ! {
     // 4. Initialize Zero-Copy Synchronous IPC
     ipc::init_ipc();
 
-    // 5. Initialize Preemptive Scheduler
+    // 5. Initialize Security Subsystem (TPM Measured Boot, Audit Buffer, IDS Engine)
+    security::init_security();
+
+    // 6. Initialize Preemptive Scheduler
     sched::init_scheduler();
 
-    // 6. Run Phase 6 Formal & Syscall Fuzz Verification Suite
+    // 7. Run Phase 6 Formal & Syscall Fuzz Verification Suite
     unsafe {
         fuzz_harness::run_syscall_fuzz_suite(256);
     }

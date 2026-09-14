@@ -8,6 +8,8 @@ members = [
     "servers/driver_virtio",
     "userspace/libsys",
     "userspace/init",
+    "servers/audit",
+    "apps/vault",
 ]
 resolver = "2"
 

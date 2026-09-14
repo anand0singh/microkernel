@@ -16,7 +16,21 @@ pub unsafe extern "C" fn rust_cap_dispatcher(
     arg2: u64,
     arg3: u64,
 ) -> u64 {
-    match op {
+    let current_thread_id = 1; // Default primary thread context
+
+    // 1. Intrusion Detection Quarantine Barrier
+    if crate::security::ids::IDS_ENGINE.lock().is_quarantined(current_thread_id) {
+        crate::security::audit::AUDIT_LOG.lock().record(
+            current_thread_id,
+            cap_ptr,
+            op,
+            crate::security::audit::AuditVerdict::Denied,
+        );
+        return 0xFFFF_FFFF_FFFF_FFFD; // Quarantined by Intrusion Detection System
+    }
+
+    // 2. Syscall Opcode Routing with Security Logging
+    let res = match op {
         1 => {
             // CapInvoke
             crate::cap::cnode::dispatch_cap_invoke(cap_ptr, arg0, arg1, arg2, arg3)
@@ -49,8 +63,25 @@ pub unsafe extern "C" fn rust_cap_dispatcher(
             // CapCopy
             crate::cap::cdt::dispatch_cap_copy(cap_ptr, arg0)
         }
-        _ => 0xFFFF_FFFF_FFFF_FFFF, // Unknown opcode error
-    }
+        _ => {
+            // Unknown opcode anomaly - report to IDS engine
+            crate::security::ids::IDS_ENGINE.lock().record_violation(
+                current_thread_id,
+                cap_ptr,
+                op,
+            );
+            return 0xFFFF_FFFF_FFFF_FFFF;
+        }
+    };
+
+    crate::security::audit::AUDIT_LOG.lock().record(
+        current_thread_id,
+        cap_ptr,
+        op,
+        crate::security::audit::AuditVerdict::Allowed,
+    );
+
+    res
 }
 
 pub unsafe fn init_syscall_msrs(syscall_entry_ptr: VirtAddr) {

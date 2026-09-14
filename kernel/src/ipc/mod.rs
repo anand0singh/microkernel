@@ -1,4 +1,5 @@
 pub mod endpoint;
+pub mod shared_ring;
 
 pub fn init_ipc() {
     unsafe {
@@ -70,4 +71,16 @@ pub unsafe fn test_phase4_ipc() {
         30, 5, 0, 0, 0, 0,
     );
     assert_eq!(syscall_recv, 0xCAFE, "Phase 4: Syscall dispatch IpcRecv failed");
+
+    // 4. Verify Bulk Shared Memory Capability Ring
+    let mut ring = shared_ring::SharedRingBuffer::new();
+    let enq_res = ring.enqueue(0x1000, 4096);
+    assert!(enq_res.is_ok(), "Phase 4: SharedRing enqueue failed");
+
+    let deq_desc = ring.dequeue();
+    assert!(deq_desc.is_some(), "Phase 4: SharedRing dequeue failed");
+    let desc = deq_desc.unwrap();
+    assert_eq!(desc.buffer_offset, 0x1000);
+    assert_eq!(desc.length, 4096);
+    assert_eq!(desc.flags, 2); // Processed
 }
