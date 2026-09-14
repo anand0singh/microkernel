@@ -23,6 +23,8 @@ pub enum SyscallOp {
     Yield     = 6,
     CapBadge  = 7,
     CapCopy   = 8,
+    InstallFilter = 9,
+    LockFilter    = 10,
 }
 
 #[repr(C)]
@@ -112,6 +114,30 @@ pub fn cap_copy(src_slot: u64, dest_slot: u64) -> (u64, u64, u64, u64) {
         cap_ptr: src_slot,
         op: SyscallOp::CapCopy as u64,
         arg0: dest_slot,
+        arg1: 0,
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn install_filter_rule(target_cap: u64, target_op: u64, deny: bool) -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: target_cap,
+        op: SyscallOp::InstallFilter as u64,
+        arg0: target_op,
+        arg1: if deny { 1 } else { 0 },
+        arg2: 0,
+        arg3: 0,
+    };
+    unsafe { syscall(&msg) }
+}
+
+pub fn lock_filter() -> (u64, u64, u64, u64) {
+    let msg = SyscallMsg {
+        cap_ptr: 0,
+        op: SyscallOp::LockFilter as u64,
+        arg0: 0,
         arg1: 0,
         arg2: 0,
         arg3: 0,

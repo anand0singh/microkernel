@@ -29,7 +29,19 @@ pub unsafe extern "C" fn rust_cap_dispatcher(
         return 0xFFFF_FFFF_FFFF_FFFD; // Quarantined by Intrusion Detection System
     }
 
-    // 2. Syscall Opcode Routing with Security Logging
+    // 2. Seccomp-like Programmable Capability Filter Evaluation
+    let filter_action = crate::security::filter::PROCESS_FILTER.lock().evaluate(cap_ptr, op);
+    if filter_action == crate::security::filter::FilterAction::Deny {
+        crate::security::audit::AUDIT_LOG.lock().record(
+            current_thread_id,
+            cap_ptr,
+            op,
+            crate::security::audit::AuditVerdict::Denied,
+        );
+        return 0xFFFF_FFFF_FFFF_FFFC; // Blocked by Capability Filter (Seccomp)
+    }
+
+    // 3. Syscall Opcode Routing with Security Logging
     let res = match op {
         1 => {
             // CapInvoke
@@ -62,6 +74,24 @@ pub unsafe extern "C" fn rust_cap_dispatcher(
         8 => {
             // CapCopy
             crate::cap::cdt::dispatch_cap_copy(cap_ptr, arg0)
+        }
+        9 => {
+            // InstallFilterRule(target_cap, target_op, action: 0=Allow, 1=Deny)
+            let action = if arg1 == 1 {
+                crate::security::filter::FilterAction::Deny
+            } else {
+                crate::security::filter::FilterAction::Allow
+            };
+            if crate::security::filter::PROCESS_FILTER.lock().add_rule(cap_ptr, arg0, action).is_ok() {
+                0
+            } else {
+                0xFFFF_FFFF_FFFF_FFFF
+            }
+        }
+        10 => {
+            // LockFilter()
+            crate::security::filter::PROCESS_FILTER.lock().lock();
+            0
         }
         _ => {
             // Unknown opcode anomaly - report to IDS engine

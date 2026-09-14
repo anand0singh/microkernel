@@ -10,6 +10,7 @@ members = [
     "userspace/init",
     "servers/audit",
     "apps/vault",
+    "userspace/shell",
 ]
 resolver = "2"
 

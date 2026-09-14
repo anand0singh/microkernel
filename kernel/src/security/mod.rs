@@ -1,4 +1,5 @@
 pub mod audit;
+pub mod filter;
 pub mod ids;
 pub mod tpm;
 
@@ -43,4 +44,16 @@ pub unsafe fn test_security_layer() {
     let tripped = ids::IDS_ENGINE.lock().record_violation(rogue_thread_id, 999, 1);
     assert!(tripped, "Security: IDS tripwire failed to trigger on 5th violation");
     assert!(ids::IDS_ENGINE.lock().is_quarantined(rogue_thread_id), "Security: Thread failed to quarantine");
+
+    // 4. Verify Programmable Seccomp-like Capability Filter
+    let mut pf = filter::ProcessSecurityFilter::new();
+    // Deny Opcode 3 (CapRevoke) on Slot 5
+    let rule_res = pf.add_rule(5, 3, filter::FilterAction::Deny);
+    assert!(rule_res.is_ok());
+
+    assert_eq!(pf.evaluate(5, 3), filter::FilterAction::Deny);
+    assert_eq!(pf.evaluate(5, 4), filter::FilterAction::Allow); // Other opcodes allowed
+
+    pf.lock();
+    assert!(pf.add_rule(6, 1, filter::FilterAction::Deny).is_err(), "Filter allowed rule modification after lock");
 }
