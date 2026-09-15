@@ -1,5 +1,6 @@
 pub mod cdt;
 pub mod cnode;
+pub mod namespace;
 pub mod rights;
 
 pub fn init_cap_engine() {
@@ -16,6 +17,9 @@ pub fn init_cap_engine() {
             };
             let _ = cnode::ROOT_CNODE.lock().insert(0, root_cap);
         }
+
+        // Initialize Root Security Domain (Domain 0)
+        let _ = namespace::DOMAIN_MANAGER.lock().register_domain(0, b"kernel_root", 0);
 
         test_phase3_cap();
     }

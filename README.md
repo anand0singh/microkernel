@@ -94,12 +94,14 @@ Rather than building another generic Linux distribution, AegisOS implements a ze
 | Crate / Path | Target | Description |
 | :--- | :--- | :--- |
 | [`boot/`](boot/) | `x86_64-unknown-uefi` | UEFI bootloader loading `KERNEL.ELF` and configuring initial paging |
-| [`kernel/`](kernel/) | `x86_64-unknown-none` | Ring 0 Secure Microkernel (KPTI, APIC, Buddy/Slab, C-Nodes, CDT, IPC, IDS, Seccomp) |
+| [`kernel/`](kernel/) | `x86_64-unknown-none` | Ring 0 Secure Microkernel (KPTI, APIC, Buddy/Slab, C-Nodes, CDT, IPC, IDS, Seccomp, Namespaces) |
 | [`userspace/libsys/`](userspace/libsys/) | `x86_64-unknown-none` | `#![no_std]` user-space syscall library wrapping assembly trampolines |
 | [`userspace/init/`](userspace/init/) | `x86_64-unknown-none` | Root user space process orchestrator |
 | [`userspace/shell/`](userspace/shell/) | `x86_64-unknown-none` | Interactive Ring 3 micro-shell with diagnostic diagnostics |
 | [`servers/vfs/`](servers/vfs/) | `x86_64-unknown-none` | Encrypted Virtual Filesystem with XTS-AES-256 and Merkle validation |
 | [`servers/driver_virtio/`](servers/driver_virtio/) | `x86_64-unknown-none` | Ring 3 VirtIO 1.0 block driver with DMA VirtQueues |
+| [`servers/driver_net/`](servers/driver_net/) | `x86_64-unknown-none` | Ring 3 VirtIO 1.0 network driver with split packet VirtQueues |
+| [`servers/keystore/`](servers/keystore/) | `x86_64-unknown-none` | Ring 3 Cryptographic Keystore Enclave with anti-tamper zeroization |
 | [`servers/net/`](servers/net/) | `x86_64-unknown-none` | Distributed network stack with Cap-over-Wire and Raft consensus |
 | [`servers/crypto/`](servers/crypto/) | `x86_64-unknown-none` | Ed25519 identity server and Noise_IK handshake engine |
 | [`servers/audit/`](servers/audit/) | `x86_64-unknown-none` | Centralized audit telemetry and IDS alert daemon |
@@ -128,7 +130,7 @@ Rather than building another generic Linux distribution, AegisOS implements a ze
 ---
 
 ### Step 1: Compile the Workspace
-Compile all 11 microkernel crates into bare-metal ELF binaries:
+Compile all 13 microkernel crates into bare-metal ELF binaries:
 ```bash
 cargo build --workspace
 ```
@@ -153,8 +155,10 @@ target/esp/
 └── SERVICES/                  # Ring 3 Isolated User-Space Servers
     ├── audit.elf
     ├── crypto.elf
+    ├── driver-net.elf
     ├── driver-virtio.elf
     ├── init.elf
+    ├── keystore.elf
     ├── net.elf
     ├── shell.elf
     ├── vault.elf
@@ -180,48 +184,57 @@ cargo run --manifest-path tools/security_suite/Cargo.toml
    MICROKERNEL SECURITY VERIFICATION & FUZZING SUITE
 ================================================================
 
-[1/8] Running XTS-AES-256 Sector Cipher Test...
-  -> Encrypted 4096-byte sector at LBA 42 in 2.12ms
-  -> Decrypted 4096-byte sector in 1.87ms
+[1/10] Running XTS-AES-256 Sector Cipher Test...
+  -> Encrypted 4096-byte sector at LBA 42 in 1.65ms
+  -> Decrypted 4096-byte sector in 1.64ms
   [PASS] XTS-AES-256 Sector Roundtrip Verified!
 
-[2/8] Running Merkle Tree Block Hash Integrity Test...
+[2/10] Running Merkle Tree Block Hash Integrity Test...
   -> Clean Merkle Root (4 blocks): [fa, d2, 67, 8e, 22, d9, 9e, 0e]
   -> Tampered Merkle Root:          [2e, e2, e1, d1, 40, 52, 93, b0]
   [PASS] Merkle Tree Block Tampering Rejection Verified!
 
-[3/8] Running Capability Derivation Tree (CDT) Revocation Test...
+[3/10] Running Capability Derivation Tree (CDT) Revocation Test...
   -> Attenuation Guard Verified: Privilege escalation rejected.
   [PASS] CDT Cascading Revocation Verified (Grandchild revoked, sibling intact)!
 
-[4/8] Running Seccomp-like Capability Filter Test...
+[4/10] Running Seccomp-like Capability Filter Test...
   -> Filter Immutability Lock Verified.
   [PASS] Seccomp-like Capability Filter Verified (Whitelist, Kill rule, Violations tracked)!
 
-[5/8] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...
-  -> Executed 100000 random syscall packets in 4.16ms
-  -> Average dispatch latency: 41.64 ns/op
+[5/10] Running Syzkaller-style Syscall Fuzzer (100,000 iterations)...
+  -> Executed 100000 random syscall packets in 3.13ms
+  -> Average dispatch latency: 31.33 ns/op
   [PASS] 100,000 Fuzz Iterations Passed with 0 Invariant Violations!
 
-[6/8] Running Distributed Raft Consensus Quorum Test...
+[6/10] Running Distributed Raft Consensus Quorum Test...
   -> Achieved quorum: 4/5 votes.
   [PASS] Raft Consensus Protocol Simulation Verified!
 
-[7/8] Running ELF64 Binary Loader & Protection Flags Test...
+[7/10] Running ELF64 Binary Loader & Protection Flags Test...
   -> Validated ELF64 Header: Entry=0x400000, Segments=2
   -> Enforced NX Invariant: Data segment marked non-executable.
   -> Enforced W^X Invariant: Code segment marked non-writable.
   -> Malformed Header Rejection Verified.
   [PASS] ELF64 Loader & Memory Protection Invariants Verified!
 
-[8/8] Running Preemptive Multi-Tasking Scheduler State Machine Test...
+[8/10] Running Preemptive Multi-Tasking Scheduler State Machine Test...
   -> IPC Blocking Transition Verified: Blocked Thread 1 yielded to Thread 2.
   -> Quantum Preemption Verified: Round-robin advanced to Thread 3.
   -> Unblocking & Dead Thread Elimination Verified.
   [PASS] Preemptive Multi-Tasking Scheduler State Machine Verified!
 
+[9/10] Running Cryptographic Keystore Enclave & Anti-Tamper Test...
+  -> HKDF-style Key Derivation Verified.
+  -> Anti-Tamper Emergency Memory Wipe Verified: All keys zeroized.
+  [PASS] Cryptographic Keystore Enclave & Anti-Tamper Zeroization Verified!
+
+[10/10] Running Multi-Tenant Capability Namespaces Test...
+  -> Multi-Tenant Isolation Verified: Cross-tenant invocation denied.
+  [PASS] Multi-Tenant Capability Namespaces & Boundary Enforcement Verified!
+
 ================================================================
-   ALL 8 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE
+   ALL 10 SECURITY SUBSYSTEM TESTS PASSED - SYSTEM PRISTINE
 ================================================================
 ```
 

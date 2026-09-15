@@ -9,6 +9,8 @@ members = [
     "userspace/libsys",
     "userspace/init",
     "servers/audit",
+    "servers/keystore",
+    "servers/driver_net",
     "apps/vault",
     "userspace/shell",
 ]

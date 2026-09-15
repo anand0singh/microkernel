@@ -51,6 +51,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "driver-net"
+version = "0.1.0"
+dependencies = [
+ "libsys",
+]
+
+[[package]]
 name = "driver-virtio"
 version = "0.1.0"
 dependencies = [
@@ -72,6 +79,13 @@ dependencies = [
  "libsys",
  "spin",
  "x86_64",
+]
+
+[[package]]
+name = "keystore"
+version = "0.1.0"
+dependencies = [
+ "libsys",
 ]
 
 [[package]]

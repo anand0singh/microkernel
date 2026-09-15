@@ -21,7 +21,7 @@ Copy-Item -Force "target/x86_64-unknown-uefi/debug/boot.efi" "$TargetDir/EFI/BOO
 Copy-Item -Force "target/x86_64-unknown-none/debug/kernel" "$TargetDir/KERNEL.ELF"
 
 # Copy Ring 3 User Space Service Binaries
-$services = @("vfs", "net", "crypto", "audit", "driver-virtio", "init", "vault", "shell")
+$services = @("vfs", "net", "crypto", "audit", "driver-virtio", "driver-net", "keystore", "init", "vault", "shell")
 foreach ($srv in $services) {
     $srcPath = "target/x86_64-unknown-none/debug/$srv"
     if (Test-Path $srcPath) {

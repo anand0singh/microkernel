@@ -28,7 +28,7 @@ jobs:
 
       - name: Verify ELF Service Binaries
         run: |
-          services=("kernel" "vfs" "net" "crypto" "audit" "driver-virtio" "init" "vault" "shell")
+          services=("kernel" "vfs" "net" "crypto" "audit" "driver-virtio" "driver-net" "keystore" "init" "vault" "shell")
           for srv in "${services[@]}"; do
             file="target/x86_64-unknown-none/debug/$srv"
             if [ -f "$file" ]; then
@@ -49,7 +49,7 @@ jobs:
           mkdir -p target/esp/EFI/BOOT target/esp/SERVICES
           cp target/x86_64-unknown-uefi/debug/boot.efi target/esp/EFI/BOOT/BOOTX64.EFI
           cp target/x86_64-unknown-none/debug/kernel target/esp/KERNEL.ELF
-          services=("vfs" "net" "crypto" "audit" "driver-virtio" "init" "vault" "shell")
+          services=("vfs" "net" "crypto" "audit" "driver-virtio" "driver-net" "keystore" "init" "vault" "shell")
           for srv in "${services[@]}"; do
             cp "target/x86_64-unknown-none/debug/$srv" "target/esp/SERVICES/$srv.elf"
           done
